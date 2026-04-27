@@ -1,0 +1,7 @@
+*.duckdb
+*.duckdb.wal
+*.xlsx
+__pycache__/
+*.pyc
+.venv/
+.env
