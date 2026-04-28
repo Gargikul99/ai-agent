@@ -1,19 +1,25 @@
-import duckdb
+import psycopg2
 import os
 import random
 import uuid
 from datetime import datetime, timedelta, date
+from dotenv import load_dotenv
 
-# ── Connection ───────────────────────────────────────────────
-DB_PATH = os.path.join(os.path.dirname(__file__),
-                       "../database/supply_chain.duckdb")
+load_dotenv()
 
-conn = duckdb.connect(DB_PATH)
+DB_CONFIG = {
+    "host":     os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user":     os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD")
+}
+
+conn = psycopg2.connect(**DB_CONFIG)
+cur  = conn.cursor()
 random.seed(42)
 today = date(2026, 4, 21)
 
-print("Connected to DuckDB...")
-
+print("Connected to PostgreSQL...")
 # ── Section 1: Seed Zones ────────────────────────────────────
 def seed_zones():
     zones = [
@@ -34,9 +40,9 @@ def seed_zones():
      33.7490, -84.5466, 200000, 'David Williams'),
     ]
 
-    conn.execute("DELETE FROM zones")
-    conn.executemany("""
-        INSERT INTO zones VALUES (?,?,?,?,?,?,?,?,?)
+    cur.execute("DELETE FROM zones")
+    cur.executemany("""
+        INSERT INTO zones VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, zones)
     print(f"✅ Zones seeded — {len(zones)} zones")
 
@@ -176,10 +182,10 @@ def seed_inventory():
                 ))
             sku_counter += 1
 
-    conn.execute("DELETE FROM inventory")
-    conn.executemany("""
+    cur.execute("DELETE FROM inventory")
+    cur.executemany("""
         INSERT INTO inventory VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, rows)
     print(f"✅ Inventory seeded — {len(rows)} records across 5 zones")
 
@@ -267,10 +273,10 @@ def seed_transport():
             ))
             lane_counter += 1
 
-    conn.execute("DELETE FROM transport")
-    conn.executemany("""
+    cur.execute("DELETE FROM transport")
+    cur.executemany("""
         INSERT INTO transport VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, rows)
     print(f"✅ Transport seeded — {len(rows)} lanes across 5 zones")
 
@@ -345,10 +351,10 @@ def seed_shipments():
             ))
             shipment_counter += 1
 
-    conn.execute("DELETE FROM shipments")
-    conn.executemany("""
+    cur.execute("DELETE FROM shipments")
+    cur.executemany("""
         INSERT INTO shipments VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, rows)
     print(f"✅ Shipments seeded — {len(rows)} shipments across 5 zones")
 
@@ -363,11 +369,13 @@ def seed_sales():
     sale_counter = 1
 
     # Get all SKUs from inventory
-    skus = conn.execute("""
+    cur.execute("""
         SELECT DISTINCT sku_id, product_name, category, 
                zone_id, avg_daily_demand, unit_cost_inr
         FROM inventory
-    """).fetchall()
+    """)
+    skus = cur.fetchall()
+
 
     for sku_id, product, category, zone_id, avg_demand, unit_cost in skus:
         for day in range(90):
@@ -406,10 +414,10 @@ def seed_sales():
             ))
             sale_counter += 1
 
-    conn.execute("DELETE FROM sales")
-    conn.executemany("""
+    cur.execute("DELETE FROM sales")
+    cur.executemany("""
         INSERT INTO sales VALUES
-        (?,?,?,?,?,?,?,?,?,?,?,?)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, rows)
     print(f"✅ Sales seeded — {len(rows):,} records (90 days × all SKUs)")
 
@@ -422,7 +430,7 @@ def seed_forecasts():
     forecast_counter = 1
 
     # Get sales history per SKU per zone
-    sales_data = conn.execute("""
+    cur.execute("""
         SELECT 
             zone_id,
             sku_id,
@@ -431,7 +439,8 @@ def seed_forecasts():
         FROM sales
         WHERE sale_date >= DATE '2026-03-22'  -- last 30 days
         GROUP BY zone_id, sku_id
-    """).fetchall()
+    """)
+    sales_data = cur.fetchall()
 
     forecast_date = date(2026, 4, 21)
 
@@ -458,11 +467,16 @@ def seed_forecasts():
         ))
         forecast_counter += 1
 
-    conn.execute("DELETE FROM forecasts")
-    conn.executemany("""
+    cur.execute("DELETE FROM forecasts")
+    cur.executemany("""
         INSERT INTO forecasts VALUES
-        (?,?,?,?,?,?,?,?,?)
+        (%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, rows)
     print(f"✅ Forecasts seeded — {len(rows):,} records")
 
 seed_forecasts()
+
+conn.commit()
+cur.close()
+conn.close()
+print("All data committed and connection closed")

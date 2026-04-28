@@ -1,23 +1,40 @@
-import duckdb
+import psycopg2
 import os
 import pandas as pd
 from datetime import datetime
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
 
-# Path to DuckDB database file
-DB_PATH = os.path.join(os.path.dirname(__file__),
-                       "../database/supply_chain.duckdb")
+load_dotenv()
+
+DB_CONFIG = {
+    "host":     os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user":     os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD")
+}
+
+def get_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
+def get_engine():
+    return create_engine(
+        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
+        f"@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+    )
+
 
 def extract_all():
-    conn = duckdb.connect(DB_PATH)
+    conn = get_engine()
     print(f"Extract starting at {datetime.now().strftime('%H:%M:%S')}")
 
     # Pull inventory with zone details joined in
-    inventory = conn.execute("""
+    inventory = pd.read_sql("""
         SELECT i.*, z.zone_name, z.city, z.region,
                z.warehouse_address, z.capacity_sqft, z.manager_name
         FROM inventory i
         JOIN zones z ON i.zone_id = z.zone_id
-    """).fetchdf()
+    """, conn)
     print(f"Inventory: {len(inventory)} records")
 
     # Basic null check on critical columns
@@ -29,17 +46,17 @@ def extract_all():
         print("Inventory validation passed")
 
     # Pull transport lanes with zone details
-    transport = conn.execute("""
+    transport = pd.read_sql("""
         SELECT t.*, z.city, z.region
         FROM transport t
         JOIN zones z ON t.zone_id = z.zone_id
-    """).fetchdf()
+    """, conn)
     print(f"Transport: {len(transport)} records")
 
     # Pull shipments joined to zones and transport lanes
     # LEFT JOIN on transport because some shipments may not
     # have a matching lane if data is incomplete
-    shipments = conn.execute("""
+    shipments = pd.read_sql("""
         SELECT s.*, z.city, z.region,
                t.carrier as lane_carrier,
                t.mode as transport_mode,
@@ -48,29 +65,29 @@ def extract_all():
         FROM shipments s
         JOIN zones z ON s.zone_id = z.zone_id
         LEFT JOIN transport t ON s.lane_id = t.lane_id
-    """).fetchdf()
+    """, conn)
     print(f"Shipments: {len(shipments)} records")
 
     # Pull sales history with zone details
-    sales = conn.execute("""
+    sales = pd.read_sql("""
         SELECT s.*, z.city, z.region
         FROM sales s
         JOIN zones z ON s.zone_id = z.zone_id
-    """).fetchdf()
+    """, conn)
     print(f"Sales: {len(sales):,} records")
 
     # Pull forecasts joined to inventory for product context
-    forecasts = conn.execute("""
+    forecasts = pd.read_sql("""
         SELECT f.*, i.product_name, i.category,
                i.current_stock, i.avg_daily_demand,
                i.status as inventory_status
         FROM forecasts f
         JOIN inventory i ON f.sku_id  = i.sku_id
                         AND f.zone_id = i.zone_id
-    """).fetchdf()
+    """, conn)
     print(f"Forecasts: {len(forecasts)} records")
 
-    conn.close()
+    conn.dispose()
     print(f"Extract complete at {datetime.now().strftime('%H:%M:%S')}")
 
     return inventory, transport, shipments, sales, forecasts
