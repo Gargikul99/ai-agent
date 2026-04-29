@@ -371,7 +371,7 @@ def seed_sales():
     # Get all SKUs from inventory
     cur.execute("""
         SELECT DISTINCT sku_id, product_name, category, 
-               zone_id, avg_daily_demand, unit_cost_inr
+               zone_id, avg_daily_demand, unit_cost_usd
         FROM inventory
     """)
     skus = cur.fetchall()

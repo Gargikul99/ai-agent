@@ -42,7 +42,7 @@ def load_inventory(conn, cur, df, trigger_source="manual"):
             (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, df[['sku_id','zone_id','product_name','category',
                  'current_stock','reorder_point','avg_daily_demand',
-                 'lead_time_days','supplier','unit_cost_inr',
+                 'lead_time_days','supplier','unit_cost_usd',
                  'days_of_stock','reorder_qty','status',
                  'action_required','last_updated']].values.tolist())
 
@@ -67,7 +67,7 @@ def load_transport(conn, cur, df, trigger_source="manual"):
         """, df[['lane_id','zone_id','origin','destination',
                  'carrier','mode','distance_km',
                  'planned_transit_days','actual_transit_days',
-                 'on_time','delay_days','cost_per_kg_inr',
+                 'on_time','delay_days','cost_per_kg_usd',
                  'damage_rate_pct','performance_score',
                  'last_updated']].values.tolist())
 
@@ -93,7 +93,7 @@ def load_shipments(conn, cur, df, trigger_source="manual"):
                  'origin','customer','category','carrier',
                  'status','dispatch_date','planned_delivery',
                  'actual_delivery','delay_days','weight_kg',
-                 'value_inr','pod_received',
+                 'value_usd','pod_received',
                  'last_updated']].values.tolist())
 
         duration = time.time() - start
@@ -141,7 +141,7 @@ def load_sales(conn, cur, df, trigger_source="manual"):
             (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, df[['sale_id','zone_id','sku_id','product_name',
                  'category','quantity_sold','sale_date',
-                 'customer','channel','price_inr',
+                 'customer','channel','price_usd',
                  'promotion_flag','last_updated']].values.tolist())
 
         duration = time.time() - start
