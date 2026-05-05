@@ -483,3 +483,65 @@ async def notify_clients(topic: str):
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "Supply Chain API running"}
+
+@app.get("/api/forecasts")
+def forecasts():
+    
+    # At risk SKUs
+    at_risk = pd.read_sql("""
+        SELECT sku_id, zone_id, product_name, city,
+               current_stock, forecasted_demand,
+               ROUND((current_stock - forecasted_demand * 14)::numeric, 0) AS stock_gap,
+               upper_bound, lower_bound, status
+        FROM inventory_summary
+        WHERE current_stock < forecasted_demand * 14
+        ORDER BY stock_gap ASC
+        LIMIT 20
+    """, get_engine())
+
+    # Zone level forecast summary
+    zone_forecast = pd.read_sql("""
+        SELECT city,
+               SUM(forecasted_demand)                              AS total_demand,
+               COUNT(CASE WHEN current_stock < forecasted_demand * 14 
+                     THEN 1 END)                                   AS skus_at_risk,
+               ROUND(AVG(upper_bound - lower_bound)::numeric, 1)  AS avg_uncertainty
+        FROM inventory_summary
+        GROUP BY city
+        ORDER BY skus_at_risk DESC
+    """, get_engine())
+
+    total_at_risk = len(at_risk)
+    total_demand  = int(at_risk["forecasted_demand"].sum() * 14)
+
+    kpis = [
+        {
+            "label": "SKUs at Risk (2 weeks)",
+            "value": total_at_risk,
+            "status": "critical" if total_at_risk > 50 else "warning"
+        },
+        {
+            "label": "Total 2-Week Demand",
+            "value": f"{total_demand:,}",
+            "status": "healthy"
+        },
+        {
+            "label": "Zones with Risk",
+            "value": int(zone_forecast[zone_forecast["skus_at_risk"] > 0].shape[0]),
+            "status": "warning"
+        },
+        {
+            "label": "Highest Risk Zone",
+            "value": zone_forecast.iloc[0]["city"] if len(zone_forecast) > 0 else "None",
+            "status": "critical"
+        }
+    ]
+
+    at_risk["stock_gap"] = at_risk["stock_gap"].fillna(0)
+
+    return {
+        "kpis": kpis,
+        "atRisk": at_risk.to_dict(orient="records"),
+        "byZone": zone_forecast.to_dict(orient="records"),
+        "updatedAt": datetime.now().isoformat()
+    }

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { api } from "@/lib/api";
 import { KpiGrid, SectionCard, StatusPill } from "./primitives";
+import type { HealthStatus, KpiTile, ForecastSnapshot, ForecastItem, ForecastByZone } from "@/lib/types";
 
 const ShipmentsMap = lazy(() => import("./shipments-map"));
 
@@ -179,6 +180,81 @@ export function SuppliersSection({ flash }: { flash: boolean }) {
           </tbody>
         </table>
       </div>
+    </SectionCard>
+  );
+}
+
+export function ForecastSection({ flash }: { flash: boolean }) {
+  const { data } = useQuery({ queryKey: ["forecasts"], queryFn: api.forecasts });
+  if (!data) return <SectionCard title="Forecast & Demand Intelligence"><Skeleton /></SectionCard>;
+
+  const maxRisk = Math.max(...data.byZone.map((z) => z.skus_at_risk));
+  const maxDemand = Math.max(...data.byZone.map((z) => z.total_demand));
+
+  return (
+    <SectionCard title="Forecast & Demand Intelligence" subtitle={`Updated ${fmt(data.updatedAt)}`} flash={flash}>
+      <KpiGrid tiles={data.kpis} />
+
+      <div className="mt-5 grid lg:grid-cols-2 gap-5">
+        <div>
+          <h3 className="text-sm font-medium mb-2 text-muted-foreground">Stockout risk by zone</h3>
+          <div className="space-y-2">
+            {[...data.byZone].sort((a, b) => b.skus_at_risk - a.skus_at_risk).map((zone) => {
+              const pct = Math.round((zone.skus_at_risk / maxRisk) * 100);
+              const color = zone.skus_at_risk > 19 ? "var(--status-critical)"
+                          : zone.skus_at_risk > 17 ? "var(--status-warning)"
+                          : "var(--status-healthy)";
+              return (
+                <div key={zone.city} className="flex items-center gap-3">
+                  <div className="text-xs w-24 shrink-0">{zone.city}</div>
+                  <div className="flex-1 h-2 rounded-full bg-background/40">
+                    <div style={{ width: `${pct}%`, background: color }} className="h-2 rounded-full" />
+                  </div>
+                  <div className="text-xs text-muted-foreground w-6 text-right">{zone.skus_at_risk}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium mb-2 text-muted-foreground">2-week demand by zone</h3>
+          <div className="space-y-2">
+            {[...data.byZone].sort((a, b) => b.total_demand - a.total_demand).map((zone) => {
+              const pct = Math.round((zone.total_demand / maxDemand) * 100);
+              return (
+                <div key={zone.city} className="flex items-center gap-3">
+                  <div className="text-xs w-24 shrink-0">{zone.city}</div>
+                  <div className="flex-1 h-2 rounded-full bg-background/40">
+                    <div style={{ width: `${pct}%` }} className="h-2 rounded-full bg-primary" />
+                  </div>
+                  <div className="text-xs text-muted-foreground w-12 text-right">{zone.total_demand.toLocaleString()}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5">
+  <h3 className="text-sm font-medium mb-2 text-muted-foreground">
+    Forecast confidence by zone
+  </h3>
+  <div className="space-y-3">
+    {data.byZone.map((zone) => (
+      <div key={zone.city} className="flex items-center justify-between rounded-md bg-background/40 px-3 py-2 text-sm">
+        <div className="font-medium">{zone.city}</div>
+        <div className="text-xs text-muted-foreground">
+          {zone.skus_at_risk} SKUs at risk · {zone.total_demand.toLocaleString()} units demand
+        </div>
+        <div className="text-xs text-muted-foreground">
+          ±{zone.avg_uncertainty.toFixed(1)} uncertainty
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+        
     </SectionCard>
   );
 }

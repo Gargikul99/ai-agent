@@ -8,6 +8,7 @@ import {
   mockShipments,
   mockSnoozePO,
   mockSuppliers,
+  mockForecasts
 } from "./mock-data";
 import type {
   ChatMessage,
@@ -16,6 +17,7 @@ import type {
   PODraftsSnapshot,
   ShipmentsSnapshot,
   SuppliersSnapshot,
+  ForecastSnapshot
 } from "./types";
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -61,6 +63,10 @@ export const api = {
     if (API_CONFIG.USE_MOCK) { mockSnoozePO(id); return { ok: true }; }
     return postJSON(`/po/drafts/${id}/snooze`, { hours });
   },
+  forecasts: (): Promise<ForecastSnapshot> =>
+  API_CONFIG.USE_MOCK 
+    ? Promise.resolve(mockForecasts()) 
+    : getJSON("/forecasts"),
 
   async chat(messages: ChatMessage[]): Promise<string> {
     if (API_CONFIG.USE_MOCK) {
@@ -87,3 +93,5 @@ export const api = {
     return data.reply ?? data.content ?? data.message ?? "";
   },
 };
+
+

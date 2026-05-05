@@ -7,6 +7,7 @@ import {
   OrdersSection,
   ShipmentsSection,
   SuppliersSection,
+  ForecastSection 
 } from "@/components/dashboard/sections";
 import { ProcurementSection } from "@/components/dashboard/procurement-inbox";
 import { ChatPanel } from "@/components/dashboard/chat-panel";
@@ -78,6 +79,7 @@ function Dashboard() {
           <ProcurementSection flash={flash.po_drafts} />
           <InventorySection flash={flash.inventory} />
           <ShipmentsSection flash={flash.shipments} />
+          <ForecastSection flash={flash.inventory} />
           <OrdersSection flash={flash.orders} />
           <SuppliersSection flash={flash.suppliers} />
         </div>

@@ -133,3 +133,29 @@ export interface PODraftsSnapshot {
   kpis: KpiTile[];
   updatedAt: string;
 }
+
+
+export interface ForecastItem {
+  sku_id: string;
+  zone_id: string;
+  product_name: string;
+  city: string;
+  current_stock: number;
+  forecasted_demand: number;
+  stock_gap: number;
+  status: HealthStatus;
+}
+
+export interface ForecastByZone {
+  city: string;
+  total_demand: number;
+  skus_at_risk: number;
+  avg_uncertainty: number;
+}
+
+export interface ForecastSnapshot {
+  kpis: KpiTile[];
+  atRisk: ForecastItem[];
+  byZone: ForecastByZone[];
+  updatedAt: string;
+}

@@ -6,6 +6,7 @@ import type {
   PlacedPO,
   ShipmentsSnapshot,
   SuppliersSnapshot,
+  ForecastSnapshot
 } from "./types";
 
 const now = () => new Date().toISOString();
@@ -284,3 +285,30 @@ export const mockSnoozePO = (id: string) => {
   const draft = draftStore.find((d) => d.id === id);
   if (draft) draft.status = "snoozed";
 };
+
+
+export function mockForecasts(): ForecastSnapshot {
+  return {
+    kpis: [
+      { label: "SKUs at Risk (2 weeks)", value: 94, status: "critical" },
+      { label: "Total 2-Week Demand",    value: "48,230", status: "healthy" },
+      { label: "High Uncertainty SKUs",  value: 37, status: "warning" },
+      { label: "Forecast Accuracy",      value: "82%", status: "healthy" },
+    ],
+    atRisk: [
+      { sku_id: "SK-1104", zone_id: "A", product_name: "Kraft Mac & Cheese 7.25oz", city: "Los Angeles", current_stock: 2,   forecasted_demand: 26.3, stock_gap: -366, status: "critical" },
+      { sku_id: "SK-1041", zone_id: "D", product_name: "Nivea Body Lotion 16.9oz",  city: "New York",    current_stock: 3,   forecasted_demand: 21.0, stock_gap: -291, status: "critical" },
+      { sku_id: "SK-1017", zone_id: "C", product_name: "Honest Tea 16oz",           city: "Dallas",      current_stock: 2,   forecasted_demand: 13.0, stock_gap: -180, status: "critical" },
+      { sku_id: "SK-1060", zone_id: "B", product_name: "Febreze Air 8.8oz",         city: "Chicago",     current_stock: 17,  forecasted_demand: 495,  stock_gap: -6913, status: "critical" },
+      { sku_id: "SK-1001", zone_id: "A", product_name: "Coca-Cola 500ml",           city: "Los Angeles", current_stock: 888, forecasted_demand: 77.0, stock_gap: -190, status: "warning" },
+    ],
+    byZone: [
+      { city: "Los Angeles", total_demand: 3719, skus_at_risk: 21, avg_uncertainty: 12.3 },
+      { city: "New York",    total_demand: 4073, skus_at_risk: 16, avg_uncertainty: 10.1 },
+      { city: "Dallas",      total_demand: 4023, skus_at_risk: 19, avg_uncertainty: 11.5 },
+      { city: "Chicago",     total_demand: 3798, skus_at_risk: 18, avg_uncertainty: 13.2 },
+      { city: "Atlanta",     total_demand: 3748, skus_at_risk: 20, avg_uncertainty: 9.8  },
+    ],
+    updatedAt: new Date().toISOString(),
+  };
+}
