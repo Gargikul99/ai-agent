@@ -132,6 +132,7 @@ def get_warehouse_stats(zone_ids=None):
 
     stats = {
         "total_skus":          len(df),
+        "total_stock":         int(df["current_stock"].sum()),
         "critical_count":      len(critical),
         "warning_count":       len(warning),
         "healthy_count":       len(healthy),

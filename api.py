@@ -420,10 +420,35 @@ async def chat(request: dict):
         import sys
         sys.path.append(os.path.dirname(__file__))
         from agents.orchestrator import run_ai_orchestrator
+
         messages = request.get("messages", [])
-        question = messages[-1]["content"] if messages else ""
-        answer, agents_used = run_ai_orchestrator(question)
+
+        # Keep only last 6 messages to avoid context overflow
+        recent_messages = messages[-6:] if len(messages) > 6 else messages
+
+        # Build conversation history string
+        history = ""
+        if len(recent_messages) > 1:
+            for msg in recent_messages[:-1]:  # all except current
+                role = "User" if msg["role"] == "user" else "Assistant"
+                history += f"{role}: {msg['content']}\n"
+
+        # Current question
+        question = recent_messages[-1]["content"] if recent_messages else ""
+
+        # Combine history with current question
+        if history:
+            full_context = f"""Previous conversation:
+            {history}
+            Current question: {question}
+
+            Answer the current question. Use the conversation history for context if the question refers to something previously discussed."""
+        else:
+            full_context = question
+
+        answer, agents_used = run_ai_orchestrator(full_context)
         return {"reply": answer, "agents": agents_used}
+
     except Exception as e:
         return {"reply": f"Error: {str(e)}", "agents": []}
 

@@ -108,6 +108,7 @@ def execute_tool(tool_name, zone):
         at_risk = atp_df[atp_df["stockout_prediction"] != "Beyond 3 weeks"]
         return {
             "total_skus":         stats["total_skus"],
+            "total_stock":        stats["total_stock"],
             "critical":           stats["critical_count"],
             "warning":            stats["warning_count"],
             "healthy":            stats["healthy_count"],
